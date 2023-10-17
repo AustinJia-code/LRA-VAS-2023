@@ -28,15 +28,11 @@ HerkulexServo servo_ID_2(herkulex_bus, SERVO_ID_2);
 HerkulexServo servo_ID_3(herkulex_bus, SERVO_ID_3);
 HerkulexServo servo_ID_4(herkulex_bus, SERVO_ID_4);
 
-unsigned long last_update = 0;
-unsigned long last_update2 = 0;
-unsigned long now = 0;
-bool toggle = false;
-
+unsigned long count = 0;
 
 void setup() {
-  Serial.begin(115200);
-  servo_serial.begin(115200);
+  Serial.begin(9660);
+  servo_serial.begin(9660);
   delay(500);
   Wire.begin();
   mpu6050.begin();
@@ -47,49 +43,27 @@ void setup() {
   servo_ID_2.setTorqueOn();
   servo_ID_3.setTorqueOn();
   servo_ID_4.setTorqueOn();
+
   // Set servo colors
   servo_ID_1.setLedColor(HerkulexLed::Blue);
   servo_ID_2.setLedColor(HerkulexLed::Green);
   servo_ID_3.setLedColor(HerkulexLed::Purple);
   servo_ID_4.setLedColor(HerkulexLed::Cyan);
+
+  Serial.println();
 }
 
 void loop() {
-  herkulex_bus.update();
-  mpu6050.update();
-  now = millis();
-  int x = mpu6050.getAngleX();
-  int y = mpu6050.getAngleY();
-  if ((now - last_update) > 100) {
-    if (x < 90 and x > -90) {
-      uint16_t pos = 512 + uint16_t(x / 0.325);
-      uint16_t pos2 = 512 - uint16_t(x / 0.325);
-
-      // setPosition(pos, playtime);
-      // pos can be 0 - 1023, 512 is neutral
-      // each tick is 0.325 degrees
-      // playtime can be [0,255], each tick represents
-      // 11.2 milliseconds, if unspecified servo will
-      // move as fast as possible
-      servo_ID_1.setPosition(pos, 50);
-      servo_ID_3.setPosition(pos2, 50);
-    }
-    if (y < 90 and y > -90) {
-      uint16_t pos = 512 + uint16_t(y / 0.325);
-      uint16_t pos2 = 512 - uint16_t(y / 0.325);
-      servo_ID_2.setPosition(pos2, 50);
-      servo_ID_4.setPosition(pos, 50);
-    }
-    last_update = now;
-  }
-
-  if ((now - last_update2) > 1000) {
-    Serial.print("angleX : ");
-    Serial.print(mpu6050.getAngleX());
-    Serial.print("\tangleY : ");
-    Serial.print(mpu6050.getAngleY());
-    Serial.print("\tangleZ : ");
-    Serial.println(mpu6050.getAngleZ());
-    last_update2 = now;
-  }
+  //while (count < 10) {
+    count = count + 1;
+    herkulex_bus.update();
+    mpu6050.update();
+    servo_ID_1.setPosition(512, 50);
+    //delay(1000);
+    //servo_ID_2.setPosition(1000, 50);
+    //delay(1000);
+    herkulex_bus.executeMove();
+    Serial.print("Loop: ");
+    Serial.println(count);
+  //}
 }

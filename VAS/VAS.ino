@@ -13,9 +13,11 @@
 // https://github.com/electroniccats/mpu6050
 #include <Wire.h>
 #include "RocketConstants.hpp"
-#include "AngleWrapper.hpp"
+#include "MathFuncs.hpp"
+#include "PID.hpp"
 
-
+float roll, pitch, yaw;
+PID rollPID, pitchPID, yawPID;
 unsigned long runtime = 0;
 
 // Intantiate gyroscope
@@ -30,6 +32,7 @@ HerkulexServo EAST(herkulex_bus, EAST_ID);
 HerkulexServo SOUTH(herkulex_bus, SOUTH_ID);
 HerkulexServo WEST(herkulex_bus, WEST_ID);
 
+// Initialize everything
 void setup() {
   Serial.begin(BAUD_RATE);
   servo_serial.begin(BAUD_RATE);
@@ -50,47 +53,47 @@ void setup() {
   Wire.begin();
   mpu6050.begin();
   mpu6050.calcGyroOffsets(true);
-}
-
-void loop() {
-  herkulex_bus.update();
-  mpu6050.update();
-  runtime = millis();
 
   // roll + when rotating clockwise from above
-  float roll = -mpu6050.getAngleZ();
+  roll = -mpu6050.getAngleZ();
   // pitch + when rotating clockwise from the right
-  float pitch = -mpu6050.getAngleX();
+  pitch = -mpu6050.getAngleX();
   // yaw + when rotating clockwise from the front
-  float yaw = -mpu6050.getAngleY();
+  yaw = -mpu6050.getAngleY();
+
+  // Initialize PID controllers
+  rollPID.init("ROLL", MAX_ROLL_DEG, ROLL_KP, ROLL_KI, ROLL_KD, ROLL_SETPOINT, roll);
+  pitchPID.init("PITCH", MAX_PITCH_DEG, PITCH_KP, PITCH_KI, PITCH_KD, PITCH_SETPOINT, pitch);
+  yawPID.init("YAW", MAX_YAW_DEG, YAW_KP, YAW_KI, YAW_KD, YAW_SETPOINT, yaw);
+}
+
+// Standard arduino loop
+void loop() {
+  herkulex_bus.update();
+  runtime = millis();
+
+  // updates angles
+  roll = -mpu6050.getAngleZ();
+  pitch = -mpu6050.getAngleX();
+  yaw = -mpu6050.getAngleY();
 
   if (runtime > ACTIVATION_TIME && runtime % ACTION_RATE_MS == 0) {
-    actuate(roll, pitch, yaw);
+    // if rocket has taken off and we want to update the servos, update the MPU and actuate
+    mpu6050.update();
+    actuate();
   }
 
   if (runtime % TELEMETRY_RATE_MS == 0) {
-    Serial.println("roll : ");
-    Serial.print(roll);
-    Serial.println("pitch : ");
-    Serial.print(pitch);
-    Serial.println("yaw : ");
-    Serial.print(yaw);
-
-    Serial.println("North : ");
-    Serial.print(AngleWrapper::servoPosToRelAng(NORTH.getRawPosition()));
-    Serial.println("East : ");
-    Serial.print(AngleWrapper::servoPosToRelAng(EAST.getRawPosition()));
-    Serial.println("South : ");
-    Serial.print(AngleWrapper::servoPosToRelAng(SOUTH.getRawPosition()));
-    Serial.println("West : ");
-    Serial.print(AngleWrapper::servoPosToRelAng(WEST.getRawPosition()));
+    // if we want to print telemetry, do so
+    printTelemetry();
   }
 }
 
-void actuate(float roll, float pitch, float yaw) {    
-  float counterRoll = roll * ROLL_KP;
-  float counterYaw = yaw * YAW_KP;
-  float counterPitch = pitch * PITCH_KP;
+void actuate() {    
+  // calculate the PID responses (in servo position, [0, SERVO_TICKS]) we want from the servos
+  float counterRoll = rollPID.calculatePos(roll, runtime);
+  float counterYaw = yawPID.calculatePos(yaw, runtime);
+  float counterPitch = pitchPID.calculatePos(pitch, runtime);
 
   /*
   NORTH KINEMATICS:
@@ -98,26 +101,69 @@ void actuate(float roll, float pitch, float yaw) {
   Do not rotate when pitch +
   Rotate counterclockwise when yaw +
   */
-  NORTH.setPosition(AngleWrapper::degToServoPos(counterRoll + 0 + -counterYaw));
+  NORTH.setPosition(counterRoll + 
+                    0 + 
+                   -counterYaw);
   /*
   EAST KINEMATICS:
   Rotate clockwise when roll +
   Rotate clockwise when pitch +
   Do not rotate when yaw +
   */
-  EAST.setPosition(AngleWrapper::degToServoPos(counterRoll  + counterPitch + 0));
+  EAST.setPosition(counterRoll + 
+                   counterPitch + 
+                   0);
   /*
   SOUTH KINEMATICS:
   Rotate clockwise when roll +
   Do not rotate when pitch +
   Rotate clockwise when yaw +
   */
-  SOUTH.setPosition(AngleWrapper::degToServoPos(counterRoll + 0 + counterYaw));
+  SOUTH.setPosition(counterRoll + 
+                    0 + 
+                    counterYaw);
   /*
   WEST KINEMATICS:
   Rotate clockwise when roll +
   Rotate counterclockwise when pitch +
   Do not rotate when yaw +
   */
-  WEST.setPosition(AngleWrapper::degToServoPos(counterRoll + counterPitch + 0));
+  WEST.setPosition(counterRoll + 
+                  -counterPitch + 
+                   0);
+}
+
+// Telemetry controller
+void printTelemetry() {
+  Serial.println("MPU Updating: " + (runtime > ACTIVATION_TIME && runtime % ACTION_RATE_MS == 0));
+  mpuTelemetry();
+  servoTelemetry();
+  PIDTelemetry();
+}
+
+// MPU angles
+void mpuTelemetry() { 
+  Serial.println("roll: ");
+  Serial.print(roll);
+  Serial.println("pitch: ");
+  Serial.print(pitch);
+  Serial.println("yaw: ");
+  Serial.print(yaw);
+}
+
+// Servo positions
+void servoTelemetry() {
+  Serial.println("North: ");
+  Serial.print(MathFuncs::servoPosToRelAng(NORTH.getRawPosition()));
+  Serial.println("East: ");
+  Serial.print(MathFuncs::servoPosToRelAng(EAST.getRawPosition()));
+  Serial.println("South: ");
+  Serial.print(MathFuncs::servoPosToRelAng(SOUTH.getRawPosition()));
+  Serial.println("West: ");
+  Serial.print(MathFuncs::servoPosToRelAng(WEST.getRawPosition()));
+}
+
+// PID values
+void PIDTelemetry() {
+
 }

@@ -1,3 +1,5 @@
+// Scans for servos
+
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 #include <HerkulexServo.h>
@@ -21,7 +23,7 @@ void loop() {
 
   if (Serial.available() > 0) {
     char c = Serial.read();
-
+    Serial.println("test");
     if (c == 's') {
       Serial.println("Scanning...");
       Serial.println("Addresses are displayed in hexadecimal");
@@ -56,7 +58,5 @@ void loop() {
       Serial.print(servos_found);
       Serial.println(" servos.");
     }
-  } else {
-    Serial.println("None");
   }
 }

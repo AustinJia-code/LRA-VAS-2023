@@ -1,3 +1,5 @@
+// Code from old VAS OneNote
+
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 //https://docs.arduino.cc/learn/built-in-libraries/software-serial

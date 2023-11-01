@@ -72,6 +72,16 @@ class MathFuncs {
       return val;
     }
 
+    static float clipTicks(float val) {
+      if (val < ACTIVE_MIN_TICK) {
+        val = 0;
+      } else if (val > ACTIVE_MAX_TICK) {
+        val = ACTIVE_MAX_TICK;
+      }
+
+      return val;
+    }
+
   /**
     * Returns the absolute value of a float
     * in: val, float

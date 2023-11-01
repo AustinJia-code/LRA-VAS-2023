@@ -14,14 +14,12 @@
 #include <Wire.h>
 #include "RocketConstants.hpp"
 #include "MathFuncs.hpp"
-#include "AnglePID.hpp"
-#include "GeneralPID.hpp"
+#include "GenericPID.hpp"
 
 // Attitude in degrees
 float roll, pitch, yaw;
 // Motor controllers
-AnglePID pitchPID, yawPID;
-GeneralPID rollPID;
+GenericPID rollPID, pitchPID, yawPID;
 // Runtims in ms
 unsigned long runtime = 0;
 
@@ -68,9 +66,9 @@ void setup() {
   yaw = -mpu6050.getAngleY();
 
   // Initialize PID controllers
-  rollPID.init(ROLL_KP, ROLL_KI, ROLL_KD, ROLL_SETPOINT_DEG);
-  pitchPID.init("PITCH", MAX_PITCH_DEG, PITCH_KP, PITCH_KI, PITCH_KD, PITCH_SETPOINT_DEG, pitch);
-  yawPID.init("YAW", MAX_YAW_DEG, YAW_KP, YAW_KI, YAW_KD, YAW_SETPOINT_DEG, yaw);
+  rollPID.init("ROLL", ROLL_KP, ROLL_KI, ROLL_KD, ROLL_SETPOINT_DEGMS, MAX_INTEGRAL_DEGMS, ERROR_TOLERANCE_DEGMS);
+  pitchPID.init("PITCH", PITCH_KP, PITCH_KI, PITCH_KD, PITCH_SETPOINT_DEG, MAX_INTEGRAL_TICKS, ERROR_TOLERANCE_DEG);
+  yawPID.init("YAW", YAW_KP, YAW_KI, YAW_KD, YAW_SETPOINT_DEG, MAX_INTEGRAL_TICKS, ERROR_TOLERANCE_DEG);
 }
 
 // Standard arduino loop
@@ -97,9 +95,9 @@ void loop() {
 
 void actuate() {    
   // calculate the PID responses (in servo position, [0, SERVO_TICKS]) we want from the servos
-  float counterRoll = rollPID.calculate(roll);
-  float counterYaw = yawPID.calculatePos(yaw);
-  float counterPitch = pitchPID.calculatePos(pitch);
+  float counterRoll = rollPID.calculate(roll, runtime);
+  float counterYaw = yawPID.calculate(yaw, runtime);
+  float counterPitch = pitchPID.calculate(pitch, runtime);
 
   /*
   NORTH KINEMATICS:
@@ -107,36 +105,44 @@ void actuate() {
   Do not rotate when pitch +
   Rotate counterclockwise when yaw +
   */
-  NORTH.setPosition(counterRoll / 2 + 
+  NORTH.setPosition(
+    MathFuncs::clipTicks(
+                    counterRoll + 
                     0 + 
-                   -counterYaw / 2);
+                   -counterYaw
+                    ));
   /*
   EAST KINEMATICS:
   Rotate clockwise when roll +
   Rotate clockwise when pitch +
   Do not rotate when yaw +
   */
-  EAST.setPosition(counterRoll / 2 + 
-                   counterPitch / 2 + 
-                   0);
+  EAST.setPosition(MathFuncs::clipTicks(
+                   counterRoll + 
+                   counterPitch + 
+                   0
+                   ));
   /*
   SOUTH KINEMATICS:
   Rotate clockwise when roll +
   Do not rotate when pitch +
   Rotate clockwise when yaw +
   */
-  SOUTH.setPosition(counterRoll / 2 + 
+  SOUTH.setPosition(MathFuncs::clipTicks(
+                    counterRoll + 
                     0 + 
-                    counterYaw / 2);
+                    counterYaw
+                    ));
   /*
   WEST KINEMATICS:
   Rotate clockwise when roll +
   Rotate counterclockwise when pitch +
   Do not rotate when yaw +
   */
-  WEST.setPosition(counterRoll / 2 + 
-                  -counterPitch / 2 + 
-                   0);
+  WEST.setPosition(MathFuncs::clipTicks(
+                  counterRoll + 
+                  -counterPitch + 
+                  0));
 }
 
 // Telemetry controller

@@ -15,12 +15,13 @@
 #include "RocketConstants.hpp"
 #include "MathFuncs.hpp"
 #include "AnglePID.hpp"
+#include "GeneralPID.hpp"
 
 // Attitude in degrees
 float roll, pitch, yaw;
 // Motor controllers
-AnglePID rollPID, pitchPID, yawPID;
-bool recalibrated;
+AnglePID pitchPID, yawPID;
+GeneralPID rollPID;
 // Runtims in ms
 unsigned long runtime = 0;
 
@@ -67,11 +68,9 @@ void setup() {
   yaw = -mpu6050.getAngleY();
 
   // Initialize PID controllers
-  rollPID.init("ROLL", MAX_ROLL_DEG, ROLL_KP, ROLL_KI, ROLL_KD, ROLL_SETPOINT_DEG, roll);
+  rollPID.init(ROLL_KP, ROLL_KI, ROLL_KD, ROLL_SETPOINT_DEG);
   pitchPID.init("PITCH", MAX_PITCH_DEG, PITCH_KP, PITCH_KI, PITCH_KD, PITCH_SETPOINT_DEG, pitch);
   yawPID.init("YAW", MAX_YAW_DEG, YAW_KP, YAW_KI, YAW_KD, YAW_SETPOINT_DEG, yaw);
-
-  recalibrated = false;
 }
 
 // Standard arduino loop
@@ -83,10 +82,6 @@ void loop() {
   roll = -mpu6050.getAngleZ();
   pitch = -mpu6050.getAngleX();
   yaw = -mpu6050.getAngleY();
-
-  if (runtime > ACTIVATION_TIME_MS && !recalibrated) {
-    
-  }
 
   if (runtime > ACTIVATION_TIME_MS && runtime % ACTION_RATE_MS == 0) {
     // if rocket has taken off and we want to update the servos, update the MPU and actuate
@@ -102,9 +97,9 @@ void loop() {
 
 void actuate() {    
   // calculate the PID responses (in servo position, [0, SERVO_TICKS]) we want from the servos
-  float counterRoll = rollPID.calculatePos(roll, runtime);
-  float counterYaw = yawPID.calculatePos(yaw, runtime);
-  float counterPitch = pitchPID.calculatePos(pitch, runtime);
+  float counterRoll = rollPID.calculate(roll);
+  float counterYaw = yawPID.calculatePos(yaw);
+  float counterPitch = pitchPID.calculatePos(pitch);
 
   /*
   NORTH KINEMATICS:

@@ -16,7 +16,7 @@ class AnglePID {
     float totalErrorDeg; // degrees [-MAX_INTEGRAL, MAX_INTEGRAL]
     float prevErrorDeg; // degrees [-maxErrorDeg, maxErrorDeg]
 
-    float lastMS; // ms
+    unsigned long lastMS; // ms
     float periodMS; // ms
 
     // Initialize variables
@@ -50,9 +50,9 @@ class AnglePID {
 
     // outputs error response [-1, 1]. 
     // Ideally, if error is 1, a pure p controller will return -1
-    float calculate(float measuredDeg, float millis) {
+    float calculate(float measuredDeg) {
       float output;
-      periodMS = millis - lastMS;
+      periodMS = (float)(millis() - lastMS);
       // negative error clockwise
       float errorDeg = setPointDeg - measuredDeg;
 
@@ -76,9 +76,9 @@ class AnglePID {
 
     // Converts error from calculate method to degree
     // [-1, 1] -> [MIN_SERVO_DEG, MAX_SERVO_DEG]
-    float calculateDegree(float measuredDeg, float millis) {
+    float calculateDegree(float measuredDeg) {
       // output is from [-1, 1]
-      float output = calculate(measuredDeg, millis);
+      float output = calculate(measuredDeg);
 
       // convert [-1, 1] to servo degrees, 0 being neutral, -1 being the min, 1 being the max
       return MathFuncs::clip(MIN_SERVO_DEG, (output * NEUTRAL_SERVO_DEG) + NEUTRAL_SERVO_DEG, MAX_SERVO_DEG);
@@ -86,9 +86,9 @@ class AnglePID {
 
     // convert degree from calculateDegree to servo ticks
     // [MIN_SERVO_DEG, MAX_SERVO_DEG] -> [0, SERVO_TICKS]
-    float calculatePos(float measuredDeg, float millis) {
+    float calculatePos(float measuredDeg) {
       // output is from [MIN_SERVO_DEG, MAX_SERVO_DEG]
-      float output = calculateDegree(measuredDeg, millis);
+      float output = calculateDegree(measuredDeg);
       
       // convert servo degree to position
       return MathFuncs::degToServoPos(output);

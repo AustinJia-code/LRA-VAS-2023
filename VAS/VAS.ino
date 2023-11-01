@@ -14,10 +14,14 @@
 #include <Wire.h>
 #include "RocketConstants.hpp"
 #include "MathFuncs.hpp"
-#include "PID.hpp"
+#include "AnglePID.hpp"
 
+// Attitude in degrees
 float roll, pitch, yaw;
-PID rollPID, pitchPID, yawPID;
+// Motor controllers
+AnglePID rollPID, pitchPID, yawPID;
+bool recalibrated;
+// Runtims in ms
 unsigned long runtime = 0;
 
 // Intantiate gyroscope
@@ -55,6 +59,7 @@ void setup() {
   mpu6050.calcGyroOffsets(true);
 
   // roll + when rotating clockwise from above
+  // consideration: set roll error to angular velocity? It doesn't matter what rotation we are in, as long as we aren't spinning
   roll = -mpu6050.getAngleZ();
   // pitch + when rotating clockwise from the right
   pitch = -mpu6050.getAngleX();
@@ -62,9 +67,11 @@ void setup() {
   yaw = -mpu6050.getAngleY();
 
   // Initialize PID controllers
-  rollPID.init("ROLL", MAX_ROLL_DEG, ROLL_KP, ROLL_KI, ROLL_KD, ROLL_SETPOINT, roll);
-  pitchPID.init("PITCH", MAX_PITCH_DEG, PITCH_KP, PITCH_KI, PITCH_KD, PITCH_SETPOINT, pitch);
-  yawPID.init("YAW", MAX_YAW_DEG, YAW_KP, YAW_KI, YAW_KD, YAW_SETPOINT, yaw);
+  rollPID.init("ROLL", MAX_ROLL_DEG, ROLL_KP, ROLL_KI, ROLL_KD, ROLL_SETPOINT_DEG, roll);
+  pitchPID.init("PITCH", MAX_PITCH_DEG, PITCH_KP, PITCH_KI, PITCH_KD, PITCH_SETPOINT_DEG, pitch);
+  yawPID.init("YAW", MAX_YAW_DEG, YAW_KP, YAW_KI, YAW_KD, YAW_SETPOINT_DEG, yaw);
+
+  recalibrated = false;
 }
 
 // Standard arduino loop
@@ -77,7 +84,11 @@ void loop() {
   pitch = -mpu6050.getAngleX();
   yaw = -mpu6050.getAngleY();
 
-  if (runtime > ACTIVATION_TIME && runtime % ACTION_RATE_MS == 0) {
+  if (runtime > ACTIVATION_TIME_MS && !recalibrated) {
+    
+  }
+
+  if (runtime > ACTIVATION_TIME_MS && runtime % ACTION_RATE_MS == 0) {
     // if rocket has taken off and we want to update the servos, update the MPU and actuate
     mpu6050.update();
     actuate();
@@ -101,17 +112,17 @@ void actuate() {
   Do not rotate when pitch +
   Rotate counterclockwise when yaw +
   */
-  NORTH.setPosition(counterRoll + 
+  NORTH.setPosition(counterRoll / 2 + 
                     0 + 
-                   -counterYaw);
+                   -counterYaw / 2);
   /*
   EAST KINEMATICS:
   Rotate clockwise when roll +
   Rotate clockwise when pitch +
   Do not rotate when yaw +
   */
-  EAST.setPosition(counterRoll + 
-                   counterPitch + 
+  EAST.setPosition(counterRoll / 2 + 
+                   counterPitch / 2 + 
                    0);
   /*
   SOUTH KINEMATICS:
@@ -119,23 +130,23 @@ void actuate() {
   Do not rotate when pitch +
   Rotate clockwise when yaw +
   */
-  SOUTH.setPosition(counterRoll + 
+  SOUTH.setPosition(counterRoll / 2 + 
                     0 + 
-                    counterYaw);
+                    counterYaw / 2);
   /*
   WEST KINEMATICS:
   Rotate clockwise when roll +
   Rotate counterclockwise when pitch +
   Do not rotate when yaw +
   */
-  WEST.setPosition(counterRoll + 
-                  -counterPitch + 
+  WEST.setPosition(counterRoll / 2 + 
+                  -counterPitch / 2 + 
                    0);
 }
 
 // Telemetry controller
 void printTelemetry() {
-  Serial.println("MPU Updating: " + (runtime > ACTIVATION_TIME && runtime % ACTION_RATE_MS == 0));
+  Serial.println("MPU Updating: " + (runtime > ACTIVATION_TIME_MS && runtime % ACTION_RATE_MS == 0));
   mpuTelemetry();
   servoTelemetry();
   PIDTelemetry();

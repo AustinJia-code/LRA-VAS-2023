@@ -8,6 +8,7 @@ static const int NEUTRAL_SERVO_DEG = (MAX_SERVO_DEG + MIN_SERVO_DEG) / 2;
 static const int SERVO_RANGE_DEG = MAX_SERVO_DEG - MIN_SERVO_DEG;
 static const int SERVO_TICKS = 1023;
 static const int NEUTRAL_SERVO_TICK = SERVO_TICKS / 2;
+static const int TICKS_PER_DEG = SERVO_TICKS / SERVO_RANGE_DEG;
 
 static float degToTicks(float deg) {
   deg /= MAX_SERVO_DEG;
@@ -15,7 +16,7 @@ static float degToTicks(float deg) {
 }
 
 // HerculeX chosen range
-static const float ACTIVE_RANGE_DEG = 50;
+static const float ACTIVE_RANGE_DEG = 30;
 static const int ACTIVE_RANGE_TICKS = degToTicks(ACTIVE_RANGE_DEG);
 static const int ACTIVE_MIN_TICK = NEUTRAL_SERVO_TICK - ACTIVE_RANGE_TICKS / 2.0;
 static const int ACTIVE_MAX_TICK = NEUTRAL_SERVO_TICK + ACTIVE_RANGE_TICKS / 2.0;
@@ -43,19 +44,19 @@ static const int ACTIVATION_TIME_MS = -1;
 // Error controller values
 // Target pitch is 0 degrees
 static const float PITCH_SETPOINT_DEG = 0;
-static const float PITCH_KP = 1;
+static const float PITCH_KP = 1 * TICKS_PER_DEG;
 static const float PITCH_KI = 0;
 static const float PITCH_KD = 0;
 
 // Target yaw is 0 degrees
 static const float YAW_SETPOINT_DEG = 0;
-static const float YAW_KP = 1;
+static const float YAW_KP = 1 * TICKS_PER_DEG;
 static const float YAW_KI = 0;
 static const float YAW_KD = 0;
 
 // Target roll velocity is 0 deg/ms
 static const float ROLL_SETPOINT_DEGMS = 0;
-static const float ROLL_KP = 1;
+static const float ROLL_KP = 1 * TICKS_PER_DEG;
 static const float ROLL_KI = 0;
 static const float ROLL_KD = 0;
 static const float MAX_INTEGRAL_TICKS = 3.4028235E+38;

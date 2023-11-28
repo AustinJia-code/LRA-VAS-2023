@@ -6,7 +6,7 @@
 
 #define PIN_SW_RX 8
 #define PIN_SW_TX 9
-#define SERVO_ID  2
+#define SERVO_ID  4
 
 SoftwareSerial   servo_serial(PIN_SW_RX, PIN_SW_TX);
 HerkulexServoBus herkulex_bus(servo_serial);
@@ -21,7 +21,7 @@ void setup() {
   Serial.begin(115200);
   servo_serial.begin(115200);
   delay(500);
-  my_servo.setTorqueOn();  // turn power on
+  //my_servo.setTorqueOn();  // turn power on
 }
 
 void loop() {
@@ -29,19 +29,24 @@ void loop() {
 
   now = millis();
 
-  if ( (now - last_update) > 1000) {
+  if ( (now - last_update) > 100) {
     // called every 1000 ms
     if (toggle) {
       // move to -90° over a duration of 560ms, set LED to green
       // 512 - 90°/0.325 = 235
-      my_servo.setPosition(235, 50, HerkulexLed::Green);
+      //my_servo.setPosition(510, 50, HerkulexLed::Green);
     } else {
       // move to +90° over a duration of 560ms, set LED to blue
       // 512 + 90°/0.325 = 789
-      my_servo.setPosition(789, 50, HerkulexLed::Blue);
+      //my_servo.setPosition(515, 50, HerkulexLed::Blue);
     }
 
+    Serial.println(my_servo.getRawPosition());
     last_update = now;
     toggle = !toggle;
+  }
+
+  if ( (now - last_update) > 500) {
+    //Serial.println(my_servo.getRawPosition());
   }
 }

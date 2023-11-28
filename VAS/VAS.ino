@@ -24,7 +24,7 @@ GenericPID rollPID, pitchPID, yawPID;
 unsigned long runtime = 0;
 
 // Intantiate gyroscope
-MPU6050 mpu6050(Wire, ACCEL_COEF, GYRO_COEF);
+MPU6050 mpu6050(Wire);
 // Instantiate a pairing between a receiving pin (RX) and transmitting pin (TX)
 SoftwareSerial servo_serial(RECEIVE_PIN, TRANSMIT_PIN);
 // HerculexServoBus manages communication layer and is shared between all servos
@@ -37,8 +37,8 @@ HerkulexServo WEST(herkulex_bus, WEST_ID);
 
 // Initialize everything
 void setup() {
-  Serial.begin(BAUD_RATE);
-  servo_serial.begin(BAUD_RATE);
+  Serial.begin(115200);
+  servo_serial.begin(115200);
 
   // Turn servos on
   NORTH.setTorqueOn();
@@ -57,12 +57,11 @@ void setup() {
   mpu6050.begin();
   mpu6050.calcGyroOffsets(true);
 
-  // roll + when rotating clockwise from above
-  // consideration: set roll error to angular velocity? It doesn't matter what rotation we are in, as long as we aren't spinning
+  // roll when rotating clockwise from above (error is velocity)
   roll = -mpu6050.getAngleZ();
-  // pitch + when rotating clockwise from the right
+  // pitch + when rotating clockwise from the right (error is angle)
   pitch = -mpu6050.getAngleX();
-  // yaw + when rotating clockwise from the front
+  // yaw + when rotating clockwise from the front (error is angle)
   yaw = -mpu6050.getAngleY();
 
   // Initialize PID controllers
@@ -87,17 +86,17 @@ void loop() {
     actuate();
   }
 
-  if (runtime % TELEMETRY_RATE_MS == 0) {
+  //if (runtime % TELEMETRY_RATE_MS == 0) {
     // if we want to print telemetry, do so
     printTelemetry();
-  }
+  //}
 }
 
 void actuate() {    
   // calculate the PID responses (in servo position, [0, SERVO_TICKS]) we want from the servos
-  float counterRoll = rollPID.calculate(roll, runtime);
-  float counterYaw = yawPID.calculate(yaw, runtime);
-  float counterPitch = pitchPID.calculate(pitch, runtime);
+  float counterRoll = MathFuncs::clip(-7.0, rollPID.calculate(roll, runtime), 7.0);
+  float counterYaw = MathFuncs::clip(-7.0, yawPID.calculate(yaw, runtime), 7.0);
+  float counterPitch = MathFuncs::clip(-7.0, pitchPID.calculate(pitch, runtime), 7.0);
 
   /*
   NORTH KINEMATICS:
@@ -106,43 +105,43 @@ void actuate() {
   Rotate counterclockwise when yaw +
   */
   NORTH.setPosition(
-    MathFuncs::clipTicks(
                     counterRoll + 
                     0 + 
                    -counterYaw
-                    ));
+                    );
   /*
   EAST KINEMATICS:
   Rotate clockwise when roll +
   Rotate clockwise when pitch +
   Do not rotate when yaw +
   */
-  EAST.setPosition(MathFuncs::clipTicks(
+  EAST.setPosition(
                    counterRoll + 
                    counterPitch + 
                    0
-                   ));
+                   );
   /*
   SOUTH KINEMATICS:
   Rotate clockwise when roll +
   Do not rotate when pitch +
   Rotate clockwise when yaw +
   */
-  SOUTH.setPosition(MathFuncs::clipTicks(
+  SOUTH.setPosition(
                     counterRoll + 
                     0 + 
                     counterYaw
-                    ));
+                    );
   /*
   WEST KINEMATICS:
   Rotate clockwise when roll +
   Rotate counterclockwise when pitch +
   Do not rotate when yaw +
   */
-  WEST.setPosition(MathFuncs::clipTicks(
+  WEST.setPosition(
                   counterRoll + 
-                  -counterPitch + 
-                  0));
+                 -counterPitch + 
+                  0)
+                  ;
 }
 
 // Telemetry controller
@@ -155,24 +154,24 @@ void printTelemetry() {
 
 // MPU angles
 void mpuTelemetry() { 
-  Serial.println("roll: ");
-  Serial.print(roll);
-  Serial.println("pitch: ");
-  Serial.print(pitch);
-  Serial.println("yaw: ");
-  Serial.print(yaw);
+  Serial.print("roll: ");
+  Serial.println(roll);
+  Serial.print("pitch: ");
+  Serial.println(pitch);
+  Serial.print("yaw: ");
+  Serial.println(yaw);
 }
 
 // Servo positions
 void servoTelemetry() {
   Serial.println("North: ");
-  Serial.print(MathFuncs::servoPosToRelAng(NORTH.getRawPosition()));
+  Serial.print(NORTH.getRawPosition());
   Serial.println("East: ");
-  Serial.print(MathFuncs::servoPosToRelAng(EAST.getRawPosition()));
+  Serial.print(EAST.getRawPosition());
   Serial.println("South: ");
-  Serial.print(MathFuncs::servoPosToRelAng(SOUTH.getRawPosition()));
+  Serial.print(SOUTH.getRawPosition());
   Serial.println("West: ");
-  Serial.print(MathFuncs::servoPosToRelAng(WEST.getRawPosition()));
+  Serial.print(WEST.getRawPosition());
 }
 
 // PID values

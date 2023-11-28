@@ -15,7 +15,7 @@
 #define PIN_SW_TX 9   // in pin 9
 #define SERVO_ID_1 1  // arbitrary ID
 #define SERVO_ID_2 2  // arbitrary ID
-#define SERVO_ID_3 3  // arbitrary ID
+//#define SERVO_ID_3 3  // arbitrary ID
 #define SERVO_ID_4 4  // arbitrary ID
 
 // Intantiate gyroscope
@@ -27,7 +27,7 @@ HerkulexServoBus herkulex_bus(servo_serial);
 // Instantiate all servos under the servo bus with unique IDs
 HerkulexServo servo_ID_1(herkulex_bus, SERVO_ID_1);
 HerkulexServo servo_ID_2(herkulex_bus, SERVO_ID_2);
-HerkulexServo servo_ID_3(herkulex_bus, SERVO_ID_3);
+//HerkulexServo servo_ID_3(herkulex_bus, SERVO_ID_3);
 HerkulexServo servo_ID_4(herkulex_bus, SERVO_ID_4);
 
 unsigned long last_update = 0;
@@ -47,13 +47,17 @@ void setup() {
   // Turn servos on
   servo_ID_1.setTorqueOn();
   servo_ID_2.setTorqueOn();
-  servo_ID_3.setTorqueOn();
+  //servo_ID_3.setTorqueOn();
   servo_ID_4.setTorqueOn();
   // Set servo colors
   servo_ID_1.setLedColor(HerkulexLed::Blue);
   servo_ID_2.setLedColor(HerkulexLed::Green);
-  servo_ID_3.setLedColor(HerkulexLed::Purple);
+  //servo_ID_3.setLedColor(HerkulexLed::Purple);
   servo_ID_4.setLedColor(HerkulexLed::Cyan);
+
+  servo_ID_1.setPosition(512);
+  servo_ID_2.setPosition(512);
+  servo_ID_4.setPosition(512);
 }
 
 void loop() {
@@ -74,7 +78,7 @@ void loop() {
       // 11.2 milliseconds, if unspecified servo will
       // move as fast as possible
       servo_ID_1.setPosition(pos, 50);
-      servo_ID_3.setPosition(pos2, 50);
+      //servo_ID_3.setPosition(pos2, 50);
     }
     if (y < 90 and y > -90) {
       uint16_t pos = 512 + uint16_t(y / 0.325);
